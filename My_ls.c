@@ -7,8 +7,9 @@
 #include <pwd.h>
 #include <grp.h>
 #include <time.h>
+#include <stdbool.h>
 
-DIR *checkOptions(const char *path) {
+int readOptions(const char *path) {
     if (path[0] == '-') {
         int len = strlen(path);
         for (int i = 1; i < len; i++) {
@@ -39,10 +40,12 @@ DIR *checkOptions(const char *path) {
                     break;
                 default:
                     fprintf(stderr, "Option doesn't exist!\n");
-                    return NULL;
+                    return 0;
             }
         }
+        return 1;
     }
+    return 0;
 }
 
 DIR *openDirectory(const char *path) {
@@ -50,14 +53,24 @@ DIR *openDirectory(const char *path) {
         printf("Processing: %s\n", path);
         DIR *element = opendir(path);
         if (element == NULL) {
-            perror("Error opening directory");
+            perror("Error opening folder");
             return NULL;
         }
         return element;
     }
+    return NULL;
 }
 
-void readDirectory(DIR *element, int num_elements) {
+int checkDirectory(int argc, char *argv[]) {
+    for (int i = 1; i < (argc); i++){
+        if(argv[i][0] != '-'){
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void readDirectory(DIR *element) {
     struct dirent *elements;
     while ((elements = readdir(element)) != NULL) {
         if (elements->d_name[0] != '.') {  //(*elements).d_name[0]
@@ -70,11 +83,11 @@ void readDirectory(DIR *element, int num_elements) {
 
 void readAll(char **currentDirectory, int num_elements){
     for (int i = 0; i < num_elements; i++){
-        checkOptions(currentDirectory[i]);
+        readOptions(currentDirectory[i]);
     } for (int i = 0; i < num_elements; i++){
         DIR *repertoire = openDirectory(currentDirectory[i]);
         if (repertoire != NULL) {
-            readDirectory(repertoire, num_elements);
+            readDirectory(repertoire);
             closedir(repertoire);
         }
     }
@@ -84,8 +97,7 @@ int main(int argc, char *argv[]) {
     char *defaultDirectory[] = {"."};
     char **currentDirectory = defaultDirectory;
     int num_elements = 1;
-
-    if (argc > 1) {
+    if (checkDirectory(argc, argv)) {
         currentDirectory = &argv[1];
         num_elements = argc - 1;
     }
