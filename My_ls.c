@@ -48,6 +48,76 @@ int readOptions(const char *path) {
     return 0;
 }
 
+///////////////////////////////////////////
+
+void print_file_info(const char *filename) {
+    struct stat file_stat;
+    if (stat(filename, &file_stat) == -1) {
+        perror("stat");
+        return;
+    }
+
+    printf((S_ISDIR(file_stat.st_mode)) ? "d" : "-");
+    printf((file_stat.st_mode & S_IRUSR) ? "r" : "-");
+    printf((file_stat.st_mode & S_IWUSR) ? "w" : "-");
+    printf((file_stat.st_mode & S_IXUSR) ? "x" : "-");
+    printf((file_stat.st_mode & S_IRGRP) ? "r" : "-");
+    printf((file_stat.st_mode & S_IWGRP) ? "w" : "-");
+    printf((file_stat.st_mode & S_IXGRP) ? "x" : "-");
+    printf((file_stat.st_mode & S_IROTH) ? "r" : "-");
+    printf((file_stat.st_mode & S_IWOTH) ? "w" : "-");
+    printf((file_stat.st_mode & S_IXOTH) ? "x" : "-");
+
+    printf(" %ld", file_stat.st_nlink);
+
+    struct passwd *pw = getpwuid(file_stat.st_uid);
+    struct group *gr = getgrgid(file_stat.st_gid);
+    printf(" %s %s", pw->pw_name, gr->gr_name);
+
+
+    printf(" %ld", file_stat.st_size);
+
+    char time_str[20];
+    strftime(time_str, sizeof(time_str), "%b %d %H:%M", localtime(&file_stat.st_mtime));
+    printf(" %s", time_str);
+
+    printf(" %s\n", filename);
+}
+
+void list_directory(const char *path, int long_format) {
+    DIR *dir = opendir(path);
+    if (!dir) {
+        perror("opendir");
+        return;
+    }
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] == '.') continue; // Ignore les fichiers cachés
+
+        if (long_format)
+            print_file_info(entry->d_name);
+        else
+            printf("%s\n", entry->d_name);
+    }
+
+    closedir(dir);
+}
+
+int main(int argc, char *argv[]) {
+    int long_format = 0;
+
+    // Vérifier si l'option -l est présente
+    if (argc > 1 && strcmp(argv[1], "-l") == 0) {
+        long_format = 1;
+    }
+
+    list_directory(".", long_format);
+    return 0;
+}
+
+///////////////////////////////////
+
 DIR *openDirectory(const char *path) {
     if (path[0] != '-') {
         printf("Processing: %s\n", path);
